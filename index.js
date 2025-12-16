@@ -3,22 +3,15 @@ import fetch from "node-fetch";
 
 const app = express();
 
-const MODE = process.env.MODE;
-// "GAMES" or "PASSES"
+const MODE = process.env.MODE; // "GAMES" or "PASSES"
 
 app.get("*", async (req, res) => {
   try {
-    if (
-      MODE === "GAMES" &&
-      !req.path.startsWith("/v2/users/")
-    ) {
+    if (MODE === "GAMES" && !req.path.startsWith("/v2/users/")) {
       return res.status(403).send("Blocked");
     }
 
-    if (
-      MODE === "PASSES" &&
-      !req.path.includes("/game-passes")
-    ) {
+    if (MODE === "PASSES" && !req.path.includes("/game-passes")) {
       return res.status(403).send("Blocked");
     }
 
@@ -32,9 +25,10 @@ app.get("*", async (req, res) => {
 
     const body = await response.text();
     res.status(response.status).send(body);
-  } catch (e) {
+  } catch (err) {
     res.status(500).send("Proxy error");
   }
 });
 
-app.listen(process.env.PORT || 3000);
+// ✅ EXPORT for Vercel
+export default app;
