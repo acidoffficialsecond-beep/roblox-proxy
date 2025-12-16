@@ -6,31 +6,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    let universeId = null;
+    let universeId = gameId;
 
-    // 1️⃣ If ID is small → treat as PlaceId
+    // If small ID, treat as PlaceId → resolve universeId
     if (gameId.length < 10) {
       const placeRes = await fetch(
         `https://games.roblox.com/v1/games?placeIds=${gameId}`
       );
       const placeJson = await placeRes.json();
 
-      if (placeJson.data && placeJson.data[0]) {
-        universeId = placeJson.data[0].universeId;
-      } else {
+      if (!placeJson.data || !placeJson.data[0]) {
         return res.status(404).json({ error: "Invalid gameId" });
       }
-    } else {
-      // 2️⃣ Large IDs are UniverseIds → trust them
-      universeId = gameId;
+
+      universeId = placeJson.data[0].universeId;
     }
 
-    // 3️⃣ Fetch game passes (catalog works on Vercel)
+    // 🔥 CORRECT catalog request
     const url = new URL("https://catalog.roblox.com/v1/search/items");
     url.searchParams.set("category", "All");
     url.searchParams.set("creatorTargetId", universeId);
     url.searchParams.set("creatorType", "Game");
-    url.searchParams.set("salesTypeFilter", "1"); // Game Pass
+    url.searchParams.set("assetTypes", "34"); // ✅ GAME PASS
     url.searchParams.set("limit", "100");
 
     if (cursor) {
