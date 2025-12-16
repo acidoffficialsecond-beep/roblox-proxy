@@ -5,11 +5,6 @@ const app = express();
 
 app.get("*", async (req, res) => {
   try {
-    // Only allow game-passes endpoint
-    if (!req.path.startsWith("/v1/games/") || !req.path.includes("/game-passes")) {
-      return res.status(403).send("Blocked");
-    }
-
     const targetUrl = "https://games.roblox.com" + req.originalUrl;
 
     const response = await fetch(targetUrl, {
