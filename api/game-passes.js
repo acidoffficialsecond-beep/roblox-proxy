@@ -1,50 +1,76 @@
-export default async function handler(req, res) {
-  const { gameId } = req.query;
+export const runtime = "nodejs"; // 🔥 FORCE NODE (NOT EDGE)
 
-  if (!gameId) {
-    return res.status(400).json({ error: "Missing gameId" });
-  }
-
+export async function GET(req) {
   try {
+    const { searchParams } = new URL(req.url);
+    const gameId = searchParams.get("gameId");
+
+    if (!gameId) {
+      return new Response(JSON.stringify({
+        error: "Missing gameId"
+      }), { status: 400 });
+    }
+
     let universeId = gameId;
 
-    // Resolve placeId → universeId
-    if (gameId.length < 12) {
+    // 🔁 Resolve placeId → universeId
+    if (Number(gameId) < 1_000_000_000_000) {
       const placeRes = await fetch(
         `https://apis.roblox.com/universes/v1/places/${gameId}/universe`
       );
 
       if (!placeRes.ok) {
-        return res.status(400).json({ error: "Invalid placeId" });
+        const text = await placeRes.text();
+        return new Response(JSON.stringify({
+          error: "Failed to resolve placeId",
+          details: text
+        }), { status: 400 });
       }
 
       const placeJson = await placeRes.json();
       universeId = placeJson.universeId;
     }
 
-    let allPasses = [];
-    let cursor = null;
+    let gamePasses = [];
+    let cursor = "";
 
+    // 🔄 PAGINATION LOOP
     do {
-      let url = `https://games.roblox.com/v1/games/${universeId}/game-passes?limit=100&sortOrder=Asc`;
-      if (cursor) url += `&cursor=${cursor}`;
+      const url =
+        `https://games.roblox.com/v1/games/${universeId}/game-passes` +
+        `?limit=100&cursor=${cursor}`;
 
-      const response = await fetch(url);
-      if (!response.ok) break;
+      const res = await fetch(url);
 
-      const data = await response.json();
-      allPasses.push(...data.data);
-      cursor = data.nextPageCursor;
+      if (!res.ok) {
+        const text = await res.text();
+        return new Response(JSON.stringify({
+          error: "Roblox API failed",
+          details: text
+        }), { status: 500 });
+      }
+
+      const json = await res.json();
+
+      if (!json.data) break;
+
+      gamePasses.push(...json.data);
+      cursor = json.nextPageCursor ?? "";
+
     } while (cursor);
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       universeId,
-      count: allPasses.length,
-      gamePasses: allPasses,
+      count: gamePasses.length,
+      gamePasses
+    }), {
+      headers: { "Content-Type": "application/json" }
     });
 
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Failed to fetch game passes" });
+    return new Response(JSON.stringify({
+      error: "Server error",
+      message: err.message
+    }), { status: 500 });
   }
 }
