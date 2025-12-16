@@ -5,8 +5,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing gameId" });
   }
 
-  let url = `https://games.roblox.com/v1/games/${gameId}/game-passes?limit=100&sortOrder=Asc`;
-  if (cursor) url += `&cursor=${cursor}`;
+  const url = new URL("https://catalog.roblox.com/v1/search/items");
+  url.searchParams.set("category", "All");
+  url.searchParams.set("creatorTargetId", gameId);
+  url.searchParams.set("creatorType", "Game");
+  url.searchParams.set("salesTypeFilter", "1"); // Game Pass
+  url.searchParams.set("limit", "100");
+
+  if (cursor) {
+    url.searchParams.set("cursor", cursor);
+  }
 
   try {
     const response = await fetch(url);
