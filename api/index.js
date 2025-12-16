@@ -1,19 +1,18 @@
-import express from "express";
 import fetch from "node-fetch";
 
-const app = express();
-
-app.get("*", async (req, res) => {
+export default async function handler(req, res) {
   try {
-    const allowed =
-      req.originalUrl.startsWith("/v1/games/") &&
-      req.originalUrl.includes("/game-passes");
+    const url = req.url;
 
-    if (!allowed) {
-      return res.status(403).send("Blocked");
+    // Allow ONLY game passes
+    if (!url.startsWith("/api/v1/games/") || !url.includes("/game-passes")) {
+      res.status(403).send("Goon");
+      return;
     }
 
-    const targetUrl = "https://games.roblox.com" + req.originalUrl;
+    // Remove /api before forwarding
+    const robloxPath = url.replace("/api", "");
+    const targetUrl = "https://games.roblox.com" + robloxPath;
 
     const response = await fetch(targetUrl, {
       headers: {
@@ -26,9 +25,7 @@ app.get("*", async (req, res) => {
     res.status(response.status);
     res.setHeader("Content-Type", "application/json");
     res.send(body);
-  } catch {
+  } catch (err) {
     res.status(500).send("Proxy error");
   }
-});
-
-export default app;
+}
