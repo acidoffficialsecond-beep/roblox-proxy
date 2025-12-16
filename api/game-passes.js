@@ -8,33 +8,24 @@ export default async function handler(req, res) {
   try {
     let universeId = null;
 
-    // 1️⃣ Try as PlaceId
-    const placeRes = await fetch(
-      `https://games.roblox.com/v1/games?placeIds=${gameId}`
-    );
-    const placeJson = await placeRes.json();
-
-    if (placeJson.data && placeJson.data[0]) {
-      universeId = placeJson.data[0].universeId;
-    }
-
-    // 2️⃣ If not a place, try as UniverseId
-    if (!universeId) {
-      const universeRes = await fetch(
-        `https://games.roblox.com/v1/games?universeIds=${gameId}`
+    // 1️⃣ If ID is small → treat as PlaceId
+    if (gameId.length < 10) {
+      const placeRes = await fetch(
+        `https://games.roblox.com/v1/games?placeIds=${gameId}`
       );
-      const universeJson = await universeRes.json();
+      const placeJson = await placeRes.json();
 
-      if (universeJson.data && universeJson.data[0]) {
-        universeId = universeJson.data[0].id;
+      if (placeJson.data && placeJson.data[0]) {
+        universeId = placeJson.data[0].universeId;
+      } else {
+        return res.status(404).json({ error: "Invalid gameId" });
       }
+    } else {
+      // 2️⃣ Large IDs are UniverseIds → trust them
+      universeId = gameId;
     }
 
-    if (!universeId) {
-      return res.status(404).json({ error: "Invalid gameId" });
-    }
-
-    // 3️⃣ Fetch game passes
+    // 3️⃣ Fetch game passes (catalog works on Vercel)
     const url = new URL("https://catalog.roblox.com/v1/search/items");
     url.searchParams.set("category", "All");
     url.searchParams.set("creatorTargetId", universeId);
