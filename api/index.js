@@ -5,6 +5,14 @@ const app = express();
 
 app.get("*", async (req, res) => {
   try {
+    const allowed =
+      req.originalUrl.startsWith("/v1/games/") &&
+      req.originalUrl.includes("/game-passes");
+
+    if (!allowed) {
+      return res.status(403).send("Blocked");
+    }
+
     const targetUrl = "https://games.roblox.com" + req.originalUrl;
 
     const response = await fetch(targetUrl, {
@@ -18,7 +26,7 @@ app.get("*", async (req, res) => {
     res.status(response.status);
     res.setHeader("Content-Type", "application/json");
     res.send(body);
-  } catch (err) {
+  } catch {
     res.status(500).send("Proxy error");
   }
 });
