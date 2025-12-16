@@ -3,15 +3,10 @@ import fetch from "node-fetch";
 
 const app = express();
 
-const MODE = process.env.MODE; // "GAMES" or "PASSES"
-
 app.get("*", async (req, res) => {
   try {
-    if (MODE === "GAMES" && !req.path.startsWith("/v2/users/")) {
-      return res.status(403).send("Blocked");
-    }
-
-    if (MODE === "PASSES" && !req.path.includes("/game-passes")) {
+    // Only allow game-passes endpoint
+    if (!req.path.startsWith("/v1/games/") || !req.path.includes("/game-passes")) {
       return res.status(403).send("Blocked");
     }
 
@@ -19,16 +14,18 @@ app.get("*", async (req, res) => {
 
     const response = await fetch(targetUrl, {
       headers: {
-        "User-Agent": "Roblox/WinInet",
-      },
+        "User-Agent": "Roblox/WinInet"
+      }
     });
 
     const body = await response.text();
-    res.status(response.status).send(body);
+
+    res.status(response.status);
+    res.setHeader("Content-Type", "application/json");
+    res.send(body);
   } catch (err) {
     res.status(500).send("Proxy error");
   }
 });
 
-// ✅ EXPORT for Vercel
 export default app;
